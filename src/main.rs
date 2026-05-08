@@ -77,10 +77,23 @@ mod maybe_blank_decimal {
     }
 }
 
+// Deserialize a formatted price that has commas as thousand separators.
+fn deser_with_commas<'de, D>(deserializer: D) -> Result<Decimal, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::de::Error;
+
+    let s = String::deserialize(deserializer)?;
+    let cleaned = s.replace(',', "");
+
+    cleaned.parse::<Decimal>().map_err(D::Error::custom)
+}
+
 #[derive(Deserialize)]
 struct Quote {
     // Use Formatted so that there's no weird JSON floating point taking place - direct from String to Decimal.
-    #[serde(rename(deserialize = "priceFormatted"))]
+    #[serde(rename(deserialize = "priceFormatted"), deserialize_with="deser_with_commas")]
     clean_price: Decimal, // Renaming specifically to be clear this is not the all-in price...
     #[serde(rename(deserialize = "currencyCode"))]
     currency_code: String,
